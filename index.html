@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ANKKU vs SHUBHAM AI - EPIC FIGHT! 🤖🥊</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root {
+    --ankku:#ff4400; --shubham:#0088ff; --bg1:#1a0a2e;
+    --gold:#ffd700; --neon:#00ffcc; --ai:#a855f7;
+  }
+  body { background:var(--bg1); font-family:'Bangers',cursive; overflow:hidden; height:100dvh; width:100vw; user-select:none; }
+  #game-container { width:100%; height:100%; position:relative; display:flex; flex-direction:column; }
+  #bg-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; }
+
+  /* HUD */
+  #hud { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:8px 12px 4px; background:linear-gradient(180deg,rgba(0,0,0,0.9) 0%,transparent 100%); gap:8px; }
+  .fighter-hud { flex:1; display:flex; flex-direction:column; gap:3px; }
+  .fighter-hud.right { align-items:flex-end; }
+  .fighter-name { font-size:clamp(14px,3.5vw,26px); letter-spacing:2px; text-shadow:0 0 20px currentColor; line-height:1; }
+  #ankku-name { color:var(--ankku); }
+  #shubham-name { color:var(--shubham); }
+  .ai-badge { display:inline-block; background:linear-gradient(135deg,#a855f7,#06b6d4); color:#fff; font-size:clamp(7px,1.8vw,11px); padding:1px 5px; border-radius:4px; letter-spacing:1px; margin-left:4px; vertical-align:middle; animation:aiBlink 1.5s ease-in-out infinite alternate; }
+  @keyframes aiBlink { from{box-shadow:0 0 5px #a855f7;} to{box-shadow:0 0 15px #06b6d4;} }
+  .health-bar-bg { width:100%; height:clamp(12px,2.5vw,20px); background:#222; border-radius:4px; border:1px solid rgba(255,255,255,0.15); overflow:hidden; }
+  .health-bar { height:100%; border-radius:4px; transition:width 0.3s ease; }
+  #ankku-hp-bar { background:linear-gradient(90deg,#ff2200,#ff8800); box-shadow:0 0 10px #ff4400; }
+  #shubham-hp-bar { background:linear-gradient(90deg,#0066ff,#00ccff); box-shadow:0 0 10px #0088ff; margin-left:auto; }
+  .shubham-health-bar-bg { direction:rtl; }
+  /* AI thinking indicator */
+  .ai-thinking { display:inline-flex; gap:3px; align-items:center; }
+  .ai-dot { width:5px; height:5px; border-radius:50%; background:#a855f7; animation:dotPulse 0.8s ease-in-out infinite; }
+  .ai-dot:nth-child(2){animation-delay:0.2s;} .ai-dot:nth-child(3){animation-delay:0.4s;}
+  @keyframes dotPulse{0%,100%{transform:scale(0.5);opacity:0.3;}50%{transform:scale(1);opacity:1;}}
+  .hp-text { font-size:clamp(9px,1.8vw,13px); color:#fff; opacity:0.8; }
+  #timer-box { display:flex; flex-direction:column; align-items:center; min-width:55px; }
+  #round-text { font-size:clamp(9px,2vw,14px); color:var(--gold); }
+  #timer { font-size:clamp(26px,6.5vw,50px); color:#fff; text-shadow:0 0 20px var(--neon); line-height:1; }
+
+  /* ARENA */
+  #arena { flex:1; position:relative; z-index:5; overflow:hidden; }
+  .fighter { position:absolute; bottom:18%; display:flex; flex-direction:column; align-items:center; z-index:20; }
+  #ankku { left:8%; } #shubham { right:8%; }
+  .fighter-body { position:relative; width:clamp(58px,13vw,105px); height:clamp(88px,19vw,155px); }
+  .fighter-body svg { width:100%; height:100%; filter:drop-shadow(0 0 15px currentColor); }
+  .fighter-shadow { width:70%; height:clamp(7px,2vw,12px); background:rgba(0,0,0,0.5); border-radius:50%; margin-top:-4px; filter:blur(4px); }
+
+  /* AI STATUS PANEL */
+  #ai-status { position:absolute; right:8px; top:50%; transform:translateY(-50%); z-index:25; background:rgba(0,0,0,0.7); border:1px solid rgba(168,85,247,0.4); border-radius:10px; padding:6px 10px; min-width:90px; backdrop-filter:blur(8px); }
+  #ai-status-title { font-size:clamp(8px,2vw,11px); color:#a855f7; letter-spacing:1px; margin-bottom:4px; }
+  #ai-mode-text { font-size:clamp(9px,2.2vw,13px); color:#fff; }
+  #ai-mood { font-size:clamp(14px,3.5vw,22px); }
+
+  /* DIFFICULTY SELECTOR */
+  #difficulty-btns { display:flex; gap:5px; margin-top:4px; }
+  .diff-btn { padding:2px 6px; border-radius:5px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.5); font-family:'Bangers',cursive; font-size:clamp(8px,2vw,11px); cursor:pointer; transition:all 0.2s; }
+  .diff-btn.active { border-color:#a855f7; color:#a855f7; background:rgba(168,85,247,0.2); box-shadow:0 0 8px rgba(168,85,247,0.4); }
+
+  /* FLOOR */
+  #floor { position:absolute; bottom:0; left:0; right:0; height:20%; z-index:3; background:linear-gradient(180deg,rgba(30,10,60,0) 0%,rgba(30,10,60,0.6) 40%,rgba(10,5,30,1) 100%); }
+  #floor-line { position:absolute; bottom:18%; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--neon),transparent); z-index:4; box-shadow:0 0 15px var(--neon),0 0 30px var(--neon); }
+
+  /* CONTROLS - only ANKKU side (Shubham is AI) */
+  #controls { position:relative; z-index:10; display:flex; justify-content:space-between; align-items:flex-end; padding:8px 12px 10px; gap:8px; background:linear-gradient(0deg,rgba(0,0,0,0.88) 0%,transparent 100%); }
+  .control-pad { display:flex; flex-direction:column; gap:5px; align-items:center; }
+  .btn-row { display:flex; gap:5px; }
+  .btn { width:clamp(44px,11vw,70px); height:clamp(44px,11vw,70px); border-radius:12px; border:2px solid rgba(255,255,255,0.2); font-family:'Bangers',cursive; font-size:clamp(9px,2.2vw,14px); letter-spacing:1px; cursor:pointer; transition:transform 0.1s,box-shadow 0.1s; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px; color:#fff; text-shadow:0 1px 4px rgba(0,0,0,0.8); touch-action:manipulation; background:rgba(255,255,255,0.08); backdrop-filter:blur(4px); }
+  .btn:active,.btn.pressed { transform:scale(0.88); }
+  .btn-emoji { font-size:clamp(15px,3.8vw,24px); line-height:1; }
+  .ankku-btn { border-color:rgba(255,68,0,0.5); }
+  .ankku-btn:active,.ankku-btn.pressed { background:rgba(255,68,0,0.4); box-shadow:0 0 15px var(--ankku); }
+
+  /* AI side display */
+  #ai-control-display { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:120px; }
+  #ai-action-display { font-size:clamp(9px,2.2vw,13px); color:#a855f7; text-align:center; letter-spacing:1px; min-height:16px; }
+  #ai-brain-visual { display:flex; gap:3px; align-items:center; justify-content:center; }
+  .brain-bar { width:6px; border-radius:3px; background:#a855f7; animation:brainWave 1s ease-in-out infinite; }
+  .brain-bar:nth-child(1){height:8px;animation-delay:0s;}
+  .brain-bar:nth-child(2){height:14px;animation-delay:0.15s;}
+  .brain-bar:nth-child(3){height:18px;animation-delay:0.3s;}
+  .brain-bar:nth-child(4){height:14px;animation-delay:0.45s;}
+  .brain-bar:nth-child(5){height:8px;animation-delay:0.6s;}
+  @keyframes brainWave{0%,100%{transform:scaleY(0.4);opacity:0.4;}50%{transform:scaleY(1);opacity:1;}}
+  #shubham-ai-label { font-size:clamp(11px,2.8vw,17px); color:var(--shubham); letter-spacing:1px; }
+
+  /* CENTER */
+  #center-controls { display:flex; flex-direction:column; align-items:center; gap:5px; }
+  #start-btn { padding:7px 16px; border-radius:25px; border:2px solid var(--gold); background:linear-gradient(135deg,rgba(255,215,0,0.2),rgba(255,150,0,0.2)); color:var(--gold); font-family:'Bangers',cursive; font-size:clamp(11px,2.8vw,17px); letter-spacing:2px; cursor:pointer; touch-action:manipulation; }
+  #sound-btn { padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7); font-size:clamp(9px,2.2vw,13px); cursor:pointer; touch-action:manipulation; font-family:'Bangers',cursive; letter-spacing:1px; }
+
+  /* EFFECTS */
+  .emoji-bubble { position:absolute; font-size:clamp(18px,4.5vw,32px); top:-50px; animation:floatUp 1.2s ease-out forwards; pointer-events:none; z-index:50; }
+  @keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1);}80%{opacity:1;}100%{opacity:0;transform:translateY(-80px) scale(1.4);}}
+  .hit-effect { position:absolute; font-size:clamp(22px,6vw,48px); font-family:'Bangers',cursive; color:var(--gold); text-shadow:2px 2px 0 #000,0 0 20px #ff0; pointer-events:none; z-index:60; animation:hitPop 0.6s ease-out forwards; }
+  @keyframes hitPop{0%{transform:scale(0) rotate(-10deg);opacity:1;}50%{transform:scale(1.3) rotate(5deg);opacity:1;}100%{transform:scale(0.8) rotate(-5deg) translateY(-30px);opacity:0;}}
+  .combo-text { position:absolute; font-family:'Bangers',cursive; font-size:clamp(18px,5.5vw,42px); pointer-events:none; z-index:55; animation:comboAnim 1s ease-out forwards; text-shadow:3px 3px 0 #000; }
+  @keyframes comboAnim{0%{opacity:1;transform:scale(1.5);}50%{transform:scale(1);}100%{opacity:0;transform:translateY(-40px) scale(0.8);}}
+  .particle { position:absolute; pointer-events:none; border-radius:50%; z-index:45; animation:particleFly var(--dur) ease-out forwards; }
+  @keyframes particleFly{0%{transform:translate(0,0) scale(1);opacity:1;}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0;}}
+
+  /* BLOCK SHIELD */
+  .block-shield { position:absolute; top:0; left:-10px; right:-10px; bottom:0; border-radius:8px; pointer-events:none; z-index:25; animation:shieldPulse 0.3s ease-out; }
+  @keyframes shieldPulse{0%{opacity:0;}50%{opacity:1;}100%{opacity:0;}}
+
+  /* Animations */
+  .idle-anim { animation:idleBob 1.2s ease-in-out infinite; }
+  @keyframes idleBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+  .hit-anim { animation:hitShake 0.3s ease; }
+  @keyframes hitShake{0%,100%{transform:translateX(0);}25%{transform:translateX(15px);}75%{transform:translateX(-10px);}}
+  .attack-anim { animation:attackLunge 0.3s ease; }
+  @keyframes attackLunge{0%{transform:translateX(0);}40%{transform:translateX(18px);}100%{transform:translateX(0);}}
+  #shubham .attack-anim { animation:attackLungeR 0.3s ease; }
+  @keyframes attackLungeR{0%{transform:translateX(0);}40%{transform:translateX(-18px);}100%{transform:translateX(0);}}
+  .jump-anim { animation:jumpUp 0.5s ease; }
+  @keyframes jumpUp{0%{transform:translateY(0);}40%{transform:translateY(-60px);}100%{transform:translateY(0);}}
+  .dodge-anim { animation:dodgeBack 0.4s ease; }
+  @keyframes dodgeBack{0%{transform:translateX(0);}40%{transform:translateX(25px);}100%{transform:translateX(0);}}
+  #shubham .dodge-anim { animation:dodgeBackR 0.4s ease; }
+  @keyframes dodgeBackR{0%{transform:translateX(0);}40%{transform:translateX(-25px);}100%{transform:translateX(0);}}
+  @keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-8px,4px)}40%{transform:translate(8px,-4px)}60%{transform:translate(-6px,2px)}80%{transform:translate(6px,-2px)}}
+  .screen-shake { animation:shake 0.35s ease; }
+
+  /* OVERLAYS */
+  #overlay { position:absolute; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; flex-direction:column; background:radial-gradient(ellipse at center,rgba(26,10,46,0.96) 0%,rgba(0,0,0,0.99) 100%); gap:14px; }
+  #overlay-title { font-size:clamp(28px,9vw,72px); text-align:center; line-height:1; letter-spacing:3px; }
+  #overlay-title span:nth-child(1){color:var(--ankku);text-shadow:0 0 40px var(--ankku);}
+  #overlay-title span:nth-child(2){color:#fff;}
+  #overlay-title span:nth-child(3){color:var(--shubham);text-shadow:0 0 40px var(--shubham);}
+  .ai-tag { display:block; font-size:clamp(12px,3.5vw,22px); color:var(--ai); text-shadow:0 0 20px var(--ai); letter-spacing:3px; margin-top:4px; animation:pulse 1s ease-in-out infinite alternate; }
+  @keyframes pulse{from{opacity:0.5;}to{opacity:1;}}
+  #overlay-sub { font-size:clamp(12px,3.5vw,24px); color:var(--gold); letter-spacing:2px; text-align:center; }
+  #diff-select { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  #diff-select-label { font-size:clamp(11px,2.8vw,17px); color:rgba(255,255,255,0.7); letter-spacing:2px; }
+  #diff-select-btns { display:flex; gap:8px; }
+  .diff-select-btn { padding:8px 16px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.6); font-family:'Bangers',cursive; font-size:clamp(12px,3vw,18px); cursor:pointer; touch-action:manipulation; transition:all 0.2s; letter-spacing:1px; }
+  .diff-select-btn.selected { border-color:var(--ai); color:#fff; background:rgba(168,85,247,0.25); box-shadow:0 0 15px rgba(168,85,247,0.5); }
+  #overlay-start { padding:12px 36px; border-radius:50px; border:3px solid var(--gold); background:linear-gradient(135deg,rgba(255,215,0,0.25),rgba(255,100,0,0.25)); color:var(--gold); font-family:'Bangers',cursive; font-size:clamp(16px,4.5vw,30px); letter-spacing:3px; cursor:pointer; box-shadow:0 0 30px rgba(255,215,0,0.4); animation:glowPulse 1.5s ease-in-out infinite alternate; touch-action:manipulation; }
+  @keyframes glowPulse{from{box-shadow:0 0 20px rgba(255,215,0,0.3);}to{box-shadow:0 0 50px rgba(255,215,0,0.7),0 0 80px rgba(255,100,0,0.4);}}
+  #overlay-instructions { font-size:clamp(8px,2vw,12px); color:rgba(255,255,255,0.45); text-align:center; line-height:1.7; font-family:'Comic Neue',cursive; max-width:300px; padding:0 20px; }
+  #winner-screen { position:absolute; inset:0; z-index:90; display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px; background:radial-gradient(ellipse,rgba(20,5,40,0.97) 0%,rgba(0,0,0,0.99) 100%); }
+  #winner-text { font-size:clamp(32px,11vw,85px); text-align:center; animation:winnerAnim 0.5s ease-out; }
+  @keyframes winnerAnim{0%{transform:scale(0) rotate(-15deg);}60%{transform:scale(1.2) rotate(5deg);}100%{transform:scale(1) rotate(0deg);}}
+  #winner-quote { font-size:clamp(13px,3.5vw,22px); color:var(--gold); text-align:center; max-width:300px; font-family:'Comic Neue',cursive; animation:fadeIn 0.5s 0.3s both; }
+  @keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+  #play-again-btn { padding:11px 30px; border-radius:40px; border:2px solid var(--neon); background:rgba(0,255,204,0.15); color:var(--neon); font-family:'Bangers',cursive; font-size:clamp(15px,3.8vw,23px); letter-spacing:2px; cursor:pointer; animation:fadeIn 0.5s 0.6s both; touch-action:manipulation; }
+  #crowd-text { position:absolute; bottom:22%; left:0; right:0; font-size:clamp(9px,2.2vw,14px); color:rgba(255,255,255,0.35); letter-spacing:2px; z-index:6; white-space:nowrap; font-family:'Bangers',cursive; animation:crowdScroll 22s linear infinite; pointer-events:none; text-align:left; }
+  @keyframes crowdScroll{0%{transform:translateX(120vw);}100%{transform:translateX(-120vw);}}
+</style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="fighter-hud left">
+      <div class="fighter-name" id="ankku-name">ANKKU 🔥</div>
+      <div class="health-bar-bg"><div class="health-bar" id="ankku-hp-bar" style="width:100%"></div></div>
+      <div class="hp-text" id="ankku-hp-text">100 HP</div>
+    </div>
+    <div id="timer-box">
+      <div id="round-text">ROUND 1</div>
+      <div id="timer">60</div>
+    </div>
+    <div class="fighter-hud right">
+      <div class="fighter-name" id="shubham-name">SHUBHAM <span class="ai-badge"> AI</span></div>
+      <div class="health-bar-bg shubham-health-bar-bg"><div class="health-bar" id="shubham-hp-bar" style="width:100%"></div></div>
+      <div class="hp-text" id="shubham-hp-text" style="text-align:right">100 HP</div>
+    </div>
+  </div>
+
+  <!-- Arena -->
+  <div id="arena">
+    <div id="floor-line"></div>
+    <div id="floor"></div>
+    <div id="crowd-text">👦👦 BEAT THE AI!! 🤖 ANKKU FIGHT!! 💪 AI TOO STRONG!! 😱 SHUBHAM AI UNBEATABLE!! 🔥 GO GO GO!!</div>
+
+    <!-- AI Status Panel -->
+    <div id="ai-status">
+      <div id="ai-status-title">🤖 AI BRAIN</div>
+      <div id="ai-mood">🤔</div>
+      <div id="ai-mode-text">THINKING...</div>
+      <div id="difficulty-btns">
+        <button class="diff-btn active" onclick="setDifficulty('easy')">EASY</button>
+        <button class="diff-btn" onclick="setDifficulty('hard')">HARD</button>
+        <button class="diff-btn" onclick="setDifficulty('beast')">😈</button>
+      </div>
+    </div>
+
+    <!-- ANKKU Fighter -->
+    <div class="fighter" id="ankku">
+      <div class="fighter-body idle-anim" id="ankku-body">
+        <svg viewBox="0 0 100 160" xmlns="http://www.w3.org/2000/svg" style="color:var(--ankku)">
+          <circle cx="50" cy="22" r="18" fill="#FDBCB4"/>
+          <polygon points="36,10 44,2 50,10 56,2 64,10 58,5 50,12 42,5" fill="#2d1b00"/>
+          <circle cx="44" cy="20" r="3" fill="#1a0a0a"/><circle cx="56" cy="20" r="3" fill="#1a0a0a"/>
+          <line x1="40" y1="15" x2="48" y2="17" stroke="#2d1b00" stroke-width="2.5"/>
+          <line x1="52" y1="17" x2="60" y2="15" stroke="#2d1b00" stroke-width="2.5"/>
+          <path d="M 43 28 Q 50 34 57 28" stroke="#c0392b" stroke-width="2" fill="none"/>
+          <rect x="32" y="40" width="36" height="45" rx="6" fill="#ff4400"/>
+          <rect x="32" y="40" width="36" height="12" rx="4" fill="#cc2200"/>
+          <rect x="30" y="82" width="40" height="7" rx="3" fill="#FFD700"/>
+          <rect x="46" y="83" width="8" height="5" rx="1" fill="#cc9900"/>
+          <rect x="12" y="42" width="20" height="10" rx="5" fill="#FDBCB4"/>
+          <rect x="68" y="42" width="20" height="10" rx="5" fill="#FDBCB4"/>
+          <circle cx="16" cy="52" r="9" fill="#cc9980"/><circle cx="84" cy="52" r="9" fill="#cc9980"/>
+          <rect x="33" y="87" width="15" height="42" rx="6" fill="#ff4400"/>
+          <rect x="52" y="87" width="15" height="42" rx="6" fill="#ff4400"/>
+          <ellipse cx="40" cy="131" rx="12" ry="7" fill="#1a0a0a"/>
+          <ellipse cx="59" cy="131" rx="12" ry="7" fill="#1a0a0a"/>
+          <text x="4" y="54" font-size="13" fill="#ff8800">🔥</text>
+          <text x="73" y="54" font-size="13" fill="#ff8800">🔥</text>
+          <text x="50" y="67" text-anchor="middle" font-size="9" fill="#fff" font-family="Bangers,cursive">ANKKU</text>
+        </svg>
+      </div>
+      <div class="fighter-shadow"></div>
+    </div>
+
+    <!-- SHUBHAM AI Fighter -->
+    <div class="fighter" id="shubham">
+      <div class="fighter-body idle-anim" id="shubham-body" style="animation-delay:0.6s">
+        <svg viewBox="0 0 100 160" xmlns="http://www.w3.org/2000/svg" style="color:var(--shubham);transform:scaleX(-1)">
+          <circle cx="50" cy="22" r="18" fill="#FDBCB4"/>
+          <path d="M 32 12 Q 40 4 50 8 Q 60 4 68 12 Q 64 8 58 12 Q 50 6 42 12 Q 36 8 32 12 Z" fill="#1a1a2e"/>
+          <!-- AI circuits on forehead -->
+          <line x1="42" y1="10" x2="58" y2="10" stroke="#00ffcc" stroke-width="1" opacity="0.6"/>
+          <circle cx="42" cy="10" r="1.5" fill="#00ffcc" opacity="0.8"/>
+          <circle cx="58" cy="10" r="1.5" fill="#00ffcc" opacity="0.8"/>
+          <!-- Glowing eyes -->
+          <circle cx="44" cy="20" r="3.5" fill="#00aaff"/>
+          <circle cx="56" cy="20" r="3.5" fill="#00aaff"/>
+          <circle cx="44" cy="20" r="1.5" fill="#ffffff"/>
+          <circle cx="56" cy="20" r="1.5" fill="#ffffff"/>
+          <line x1="40" y1="16" x2="48" y2="15" stroke="#1a1a2e" stroke-width="2.5"/>
+          <line x1="52" y1="15" x2="60" y2="16" stroke="#1a1a2e" stroke-width="2.5"/>
+          <path d="M 45 28 Q 52 32 57 27" stroke="#c0392b" stroke-width="2" fill="none"/>
+          <rect x="32" y="40" width="36" height="45" rx="6" fill="#0088ff"/>
+          <rect x="32" y="40" width="36" height="12" rx="4" fill="#0055cc"/>
+          <!-- AI chip on chest -->
+          <rect x="43" y="55" width="14" height="10" rx="2" fill="#00ffcc" opacity="0.8"/>
+          <line x1="43" y1="58" x2="40" y2="58" stroke="#00ffcc" stroke-width="1" opacity="0.6"/>
+          <line x1="43" y1="62" x2="40" y2="62" stroke="#00ffcc" stroke-width="1" opacity="0.6"/>
+          <line x1="57" y1="58" x2="60" y2="58" stroke="#00ffcc" stroke-width="1" opacity="0.6"/>
+          <line x1="57" y1="62" x2="60" y2="62" stroke="#00ffcc" stroke-width="1" opacity="0.6"/>
+          <text x="50" y="63" text-anchor="middle" font-size="6" fill="#000" font-family="monospace">AI</text>
+          <rect x="30" y="82" width="40" height="7" rx="3" fill="#00ffcc"/>
+          <rect x="12" y="42" width="20" height="10" rx="5" fill="#FDBCB4"/>
+          <rect x="68" y="42" width="20" height="10" rx="5" fill="#FDBCB4"/>
+          <circle cx="16" cy="52" r="9" fill="#cc9980"/><circle cx="84" cy="52" r="9" fill="#cc9980"/>
+          <!-- AI circuit fists -->
+          <circle cx="16" cy="52" r="5" fill="#00aaff" opacity="0.4"/>
+          <circle cx="84" cy="52" r="5" fill="#00aaff" opacity="0.4"/>
+          <rect x="33" y="87" width="15" height="42" rx="6" fill="#0066cc"/>
+          <rect x="52" y="87" width="15" height="42" rx="6" fill="#0066cc"/>
+          <ellipse cx="40" cy="131" rx="12" ry="7" fill="#00ffcc" opacity="0.8"/>
+          <ellipse cx="59" cy="131" rx="12" ry="7" fill="#00ffcc" opacity="0.8"/>
+          <text x="4" y="54" font-size="13" fill="#00aaff">🤖</text>
+          <text x="50" y="75" text-anchor="middle" font-size="7" fill="#fff" font-family="Bangers,cursive">SHUBHAM</text>
+        </svg>
+      </div>
+      <div class="fighter-shadow"></div>
+    </div>
+  </div>
+
+  <!-- CONTROLS (Only Ankku - Shubham is AI) -->
+  <div id="controls">
+    <!-- ANKKU Controls -->
+    <div class="control-pad">
+      <div class="btn-row">
+        <button class="btn ankku-btn" id="a-punch" ontouchstart="handleBtn('a-punch',true)" ontouchend="handleBtn('a-punch',false)" onmousedown="handleBtn('a-punch',true)" onmouseup="handleBtn('a-punch',false)">
+          <span class="btn-emoji">👊</span>PUNCH
+        </button>
+        <button class="btn ankku-btn" id="a-kick" ontouchstart="handleBtn('a-kick',true)" ontouchend="handleBtn('a-kick',false)" onmousedown="handleBtn('a-kick',true)" onmouseup="handleBtn('a-kick',false)">
+          <span class="btn-emoji">🦵</span>KICK
+        </button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="a-left" ontouchstart="handleBtn('a-left',true)" ontouchend="handleBtn('a-left',false)" onmousedown="handleBtn('a-left',true)" onmouseup="handleBtn('a-left',false)">⬅️</button>
+        <button class="btn ankku-btn" id="a-special" ontouchstart="handleBtn('a-special',true)" ontouchend="handleBtn('a-special',false)" onmousedown="handleBtn('a-special',true)" onmouseup="handleBtn('a-special',false)">
+          <span class="btn-emoji">🔥</span>SUPER
+        </button>
+        <button class="btn" id="a-right" ontouchstart="handleBtn('a-right',true)" ontouchend="handleBtn('a-right',false)" onmousedown="handleBtn('a-right',true)" onmouseup="handleBtn('a-right',false)">➡️</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="a-jump" ontouchstart="handleBtn('a-jump',true)" ontouchend="handleBtn('a-jump',false)" onmousedown="handleBtn('a-jump',true)" onmouseup="handleBtn('a-jump',false)">
+          <span class="btn-emoji">⬆️</span>JUMP
+        </button>
+      </div>
+    </div>
+
+    <!-- Center -->
+    <div id="center-controls">
+      <button id="start-btn" onclick="togglePause()">⏸ PAUSE</button>
+      <button id="sound-btn" onclick="toggleSound()">🔊 SOUND</button>
+    </div>
+
+    <!-- AI Display Panel -->
+    <div id="ai-control-display">
+      <div id="shubham-ai-label">💧 SHUBHAM AI</div>
+      <div id="ai-brain-visual">
+        <div class="brain-bar"></div><div class="brain-bar"></div><div class="brain-bar"></div><div class="brain-bar"></div><div class="brain-bar"></div>
+      </div>
+      <div id="ai-action-display">INITIALIZING...</div>
+      <div style="font-size:clamp(18px,5vw,32px);margin-top:3px" id="ai-emoji">🤖</div>
+    </div>
+  </div>
+
+  <!-- START OVERLAY -->
+  <div id="overlay">
+    <div id="overlay-title">
+      <span>ANKKU</span><span> VS </span><span>SHUBHAM</span>
+      <span class="ai-tag">BOSS POWERED!</span>
+    </div>
+    <div id="overlay-sub">CAN YOU BEAT THE SHUBHAM ? 😈</div>
+    <div id="diff-select">
+      <div id="diff-select-label">SELECT AI DIFFICULTY:</div>
+      <div id="diff-select-btns">
+        <button class="diff-select-btn selected" onclick="selectDiff('easy',this)">😊 EASY</button>
+        <button class="diff-select-btn" onclick="selectDiff('hard',this)">😤 HARD</button>
+        <button class="diff-select-btn" onclick="selectDiff('beast',this)">💀 BEAST</button>
+      </div>
+    </div>
+    <button id="overlay-start" onclick="startGame()">▶ FIGHT THE SHUBHAM SIR</button>
+    <div id="overlay-instructions">
+      ANKKU (YOU): A/D=move, W=jump<br>F=punch, G=kick, T=super<br>
+      📱 MOBILE: Left side buttons<br>
+      🤖 SHUBHAM = FULL AI — fights on its own!
+    </div>
+  </div>
+
+  <!-- WINNER SCREEN -->
+  <div id="winner-screen">
+    <div id="winner-text"></div>
+    <div id="winner-quote"></div>
+    <button id="play-again-btn" onclick="resetGame()">🔄 REMATCH!</button>
+  </div>
+</div>
+
+<script>
+// ===== AUDIO =====
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx, soundEnabled = true;
+function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+function playTone(freq, type='square', dur=0.15, vol=0.3, detune=0) {
+  if (!soundEnabled || !audioCtx) return;
+  try {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), f = audioCtx.createBiquadFilter();
+    f.type='lowpass'; f.frequency.value=2200;
+    o.connect(f); f.connect(g); g.connect(audioCtx.destination);
+    o.type=type; o.frequency.value=freq; o.detune.value=detune;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  } catch(e){}
+}
+function playPunch(){ playTone(180,'sawtooth',0.1,0.5); playTone(90,'square',0.15,0.3,-200); }
+function playKick(){ playTone(120,'sawtooth',0.12,0.5); playTone(60,'square',0.2,0.4,-400); }
+function playSuper(){ [440,880,660,220].forEach((f,i)=>setTimeout(()=>playTone(f,'sawtooth',0.2,0.4),i*60)); }
+function playJump(){ playTone(440,'sine',0.15,0.2); }
+function playDodge(){ playTone(600,'sine',0.1,0.15); playTone(800,'sine',0.08,0.1); }
+function playBlock(){ playTone(300,'square',0.1,0.3); }
+function playWin(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.3,0.4),i*120)); }
+function playMove(){ playTone(200,'sine',0.04,0.06); }
+function playAiCharge(){ playTone(220,'sawtooth',0.05,0.15); }
+function toggleSound(){ soundEnabled=!soundEnabled; document.getElementById('sound-btn').textContent=soundEnabled?'🔊 SOUND':'🔇 MUTED'; }
+
+function playBgMusic(){
+  if (!soundEnabled||!audioCtx) return;
+  const n=[220,247,262,294,330,294,262,247];
+  let i=0;
+  const iv=setInterval(()=>{
+    if (!gameRunning||!soundEnabled){clearInterval(iv);return;}
+    playTone(n[i%n.length],'triangle',0.2,0.05);
+    i++;
+  },280);
+}
+
+// ===== 3D BACKGROUND =====
+const canvas=document.getElementById('bg-canvas'), ctx=canvas.getContext('2d');
+let particles3D=[];
+function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+function initParticles3D(){ particles3D=[]; for(let i=0;i<80;i++) particles3D.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,z:Math.random()*800+100,vx:(Math.random()-0.5)*0.4,vy:(Math.random()-0.5)*0.25,color:Math.random()>0.5?'#ff4400':'#0088ff',size:Math.random()*3+1}); }
+const stars=Array.from({length:120},()=>({x:Math.random()*100,y:Math.random()*70,r:Math.random()*1.5+0.3,blink:Math.random()*Math.PI*2}));
+let bgTime=0;
+function drawBg(){
+  const w=canvas.width,h=canvas.height; bgTime+=0.016;
+  const grd=ctx.createLinearGradient(0,0,0,h);
+  grd.addColorStop(0,'#0d0520'); grd.addColorStop(0.5,'#1a0a2e'); grd.addColorStop(1,'#050210');
+  ctx.fillStyle=grd; ctx.fillRect(0,0,w,h);
+  stars.forEach(s=>{ s.blink+=0.02; const a=0.4+0.4*Math.sin(s.blink); ctx.beginPath(); ctx.arc(s.x/100*w,s.y/100*h,s.r,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${a})`; ctx.fill(); });
+  // AI energy orb for Shubham
+  const ox=w*0.75,oy=h*0.15;
+  const og=ctx.createRadialGradient(ox,oy,0,ox,oy,h*0.1);
+  og.addColorStop(0,'rgba(0,170,255,0.3)'); og.addColorStop(0.5,'rgba(168,85,247,0.1)'); og.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=og; ctx.beginPath(); ctx.arc(ox,oy,h*0.1,0,Math.PI*2); ctx.fill();
+  // Circuit lines
+  ctx.strokeStyle=`rgba(0,255,204,${0.04+0.02*Math.sin(bgTime*2)})`;
+  ctx.lineWidth=0.5;
+  for(let i=0;i<8;i++){
+    const x=w*0.6+i*(w*0.05);
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h*0.4); ctx.stroke();
+  }
+  particles3D.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; if(p.x<0)p.x=w; if(p.x>w)p.x=0; if(p.y<0)p.y=h; if(p.y>h)p.y=0; const sc=800/p.z,a=Math.min(1,sc*0.8); ctx.beginPath(); ctx.arc(p.x,p.y,p.size*sc,0,Math.PI*2); ctx.fillStyle=p.color+Math.floor(a*255).toString(16).padStart(2,'0'); ctx.fill(); });
+  const flY=h*0.82;
+  for(let i=0;i<=10;i++){ const t=i/10,x=w*t,a=0.08+0.04*Math.sin(bgTime*2+t*5); ctx.beginPath(); ctx.moveTo(x,flY); ctx.lineTo(w*0.5,flY-h*0.15); ctx.strokeStyle=`rgba(0,255,204,${a})`; ctx.lineWidth=0.5; ctx.stroke(); }
+  for(let j=0;j<=6;j++){ const t=j/6,y=flY+(h-flY)*t,xO=(1-t)*w*0.3; ctx.beginPath(); ctx.moveTo(xO,y); ctx.lineTo(w-xO,y); ctx.strokeStyle=`rgba(0,255,204,${0.04+0.03*t})`; ctx.lineWidth=0.5; ctx.stroke(); }
+  if(gameRunning){ const wv=Math.sin(bgTime*5)*10; const eg=ctx.createLinearGradient(w*0.3,flY,w*0.7,flY); eg.addColorStop(0,'rgba(255,68,0,0.12)'); eg.addColorStop(0.5,'rgba(168,85,247,0.15)'); eg.addColorStop(1,'rgba(0,136,255,0.12)'); ctx.fillStyle=eg; ctx.beginPath(); ctx.moveTo(w*0.3,flY+wv); ctx.quadraticCurveTo(w*0.5,flY-20+wv,w*0.7,flY+wv); ctx.lineTo(w*0.7,flY+5); ctx.quadraticCurveTo(w*0.5,flY-15,w*0.3,flY+5); ctx.closePath(); ctx.fill(); }
+  requestAnimationFrame(drawBg);
+}
+
+// ===== GAME STATE =====
+let gameRunning=false, gamePaused=false, round=1, timer=60, timerInterval=null;
+
+const fighters={
+  ankku:{ hp:100, maxHp:100, x:8, comboCount:0, lastAttack:0, isJumping:false, isBlocking:false },
+  shubham:{ hp:100, maxHp:100, x:8, comboCount:0, lastAttack:0, isJumping:false, isBlocking:false }
+};
+
+// ===== AI BRAIN =====
+const AI = {
+  difficulty: 'easy',
+  state: 'idle',       // idle | approach | attack | retreat | block | dodge | charge
+  mood: 'neutral',
+  actionCooldown: 0,
+  thinkInterval: null,
+  lastPlayerX: 0,
+  aggressionLevel: 0,  // 0-100 builds up
+  healthThreshold: 0,  // tracks AI HP changes
+  consecutiveHits: 0,
+  dodgeCooldown: 0,
+  blockCooldown: 0,
+  specialCooldown: 0,
+
+  // Difficulty configs
+  configs: {
+    easy:  { reactionMs:900,  attackChance:0.35, dodgeChance:0.15, blockChance:0.12, specialChance:0.08, aggressionMax:40,  retreatAt:0.7, thinkInterval:1000 },
+    hard:  { reactionMs:500,  attackChance:0.60, dodgeChance:0.35, blockChance:0.28, specialChance:0.18, aggressionMax:70,  retreatAt:0.5, thinkInterval:600  },
+    beast: { reactionMs:200,  attackChance:0.85, dodgeChance:0.60, blockChance:0.45, specialChance:0.35, aggressionMax:100, retreatAt:0.3, thinkInterval:300  }
+  },
+
+  get cfg(){ return this.configs[this.difficulty]; },
+
+  moods: {
+    hunting: { emoji:'😤', text:'HUNTING YOU!', taunts:["Run, Ankku! 🏃","I see you! 👀","Nowhere to hide! 😈","Processing target... 🤖"] },
+    berserk: { emoji:'🤬', text:'BERSERK MODE!', taunts:["CALCULATING PAIN! 💀","ERROR: TOO EASY! 😂","MAXIMUM DAMAGE! 💥","OVERCLOCKING! ⚡"] },
+    cunning: { emoji:'😏', text:'CALCULATING...', taunts:["Predictable, human 🤓","I predicted that! 🔮","Processing... 🧠","Your moves are logged! 📊"] },
+    defensive:{ emoji:'🛡️', text:'DEFENSE MODE', taunts:["You can't break my shield! 🛡️","Try harder! 😒","Blocked! 😎","firewall.exe activated! 💻"] },
+    mocking:  { emoji:'😂', text:'MOCKING YOU!', taunts:["Is this your best? 😂","My grandma codes better! 👴","404: Skill not found! 🤣","Try turning it off and on! 🔌"] }
+  },
+
+  init(diff) {
+    this.difficulty = diff;
+    this.state = 'idle';
+    this.mood = 'neutral';
+    this.aggressionLevel = 0;
+    this.consecutiveHits = 0;
+    this.dodgeCooldown = 0;
+    this.blockCooldown = 0;
+    this.specialCooldown = 0;
+    this.actionCooldown = 0;
+    updateAiStatus('🤖','ONLINE');
+  },
+
+  think() {
+    if (!gameRunning || gamePaused) return;
+    const cfg = this.cfg;
+    const fs = fighters.shubham;
+    const fa = fighters.ankku;
+
+    // Reduce cooldowns
+    this.dodgeCooldown = Math.max(0, this.dodgeCooldown - cfg.thinkInterval);
+    this.blockCooldown = Math.max(0, this.blockCooldown - cfg.thinkInterval);
+    this.specialCooldown = Math.max(0, this.specialCooldown - cfg.thinkInterval);
+    this.actionCooldown = Math.max(0, this.actionCooldown - cfg.thinkInterval);
+
+    if (this.actionCooldown > 0) return;
+
+    // Calculate distance
+    const aPos = fa.x;
+    const sPos = fa.x; // We compare positions differently
+    const ankkuLeft = parseFloat(document.getElementById('ankku').style.left) || 8;
+    const shubhamRight = parseFloat(document.getElementById('shubham').style.right) || 8;
+    const dist = 100 - ankkuLeft - shubhamRight;
+
+    // Build aggression
+    if (fa.hp < fs.hp) this.aggressionLevel = Math.min(cfg.aggressionMax, this.aggressionLevel + 5);
+    else this.aggressionLevel = Math.max(0, this.aggressionLevel - 2);
+
+    // Update mood based on state
+    if (this.aggressionLevel > cfg.aggressionMax * 0.8) this.mood = 'berserk';
+    else if (fs.hp < 40) this.mood = 'defensive';
+    else if (dist < 20) this.mood = 'hunting';
+    else if (Math.random() < 0.1) this.mood = 'mocking';
+    else this.mood = 'cunning';
+
+    const moodData = this.moods[this.mood] || this.moods.cunning;
+    updateAiStatus(moodData.emoji, moodData.text);
+
+    // Occasional taunts
+    if (Math.random() < 0.15) {
+      const taunt = moodData.taunts[Math.floor(Math.random()*moodData.taunts.length)];
+      showTaunt(document.getElementById('shubham'), taunt);
+    }
+
+    // DECISION TREE
+    const rand = Math.random();
+
+    // If player is attacking nearby → dodge or block
+    if (dist < 25 && this.dodgeCooldown <= 0 && rand < cfg.dodgeChance) {
+      this.doAction('dodge');
+      return;
+    }
+
+    if (dist < 30 && this.blockCooldown <= 0 && rand < cfg.blockChance) {
+      this.doAction('block');
+      return;
+    }
+
+    // If very close → attack!
+    if (dist < 35) {
+      const attackRoll = Math.random();
+      if (attackRoll < cfg.attackChance) {
+        // Choose attack type intelligently
+        if (fs.hp < 30 && this.specialCooldown <= 0 && Math.random() < cfg.specialChance) {
+          this.doAction('special'); // desperation special when low HP
+        } else if (this.aggressionLevel > cfg.aggressionMax * 0.5 && this.specialCooldown <= 0 && Math.random() < cfg.specialChance) {
+          this.doAction('special');
+        } else if (Math.random() < 0.55) {
+          this.doAction('punch');
+        } else {
+          this.doAction('kick');
+        }
+        return;
+      }
+    }
+
+    // Approach or retreat based on HP
+    if (fs.hp / fs.maxHp < cfg.retreatAt && fa.hp > fs.hp) {
+      this.doAction('retreat');
+    } else if (dist > 30) {
+      this.doAction('approach');
+    } else if (dist < 15) {
+      // Too close → back off then attack
+      if (Math.random() < 0.4) this.doAction('retreat');
+      else this.doAction('punch');
+    }
+
+    // Random jump
+    if (Math.random() < 0.08 && !fs.isJumping) {
+      aiJump();
+    }
+  },
+
+  doAction(action) {
+    const cfg = this.cfg;
+    this.state = action;
+    updateAiAction(action);
+
+    setTimeout(() => {
+      if (!gameRunning) return;
+      switch(action) {
+        case 'punch':
+          attack('shubham','punch');
+          this.consecutiveHits++;
+          this.actionCooldown = cfg.reactionMs * 0.8;
+          break;
+        case 'kick':
+          attack('shubham','kick');
+          this.consecutiveHits++;
+          this.actionCooldown = cfg.reactionMs;
+          break;
+        case 'special':
+          attack('shubham','special');
+          this.specialCooldown = 4000;
+          this.consecutiveHits = 0;
+          this.actionCooldown = cfg.reactionMs * 1.5;
+          break;
+        case 'approach':
+          aiMove(-1);
+          this.actionCooldown = cfg.reactionMs * 0.5;
+          break;
+        case 'retreat':
+          aiMove(1);
+          this.actionCooldown = cfg.reactionMs * 0.6;
+          break;
+        case 'dodge':
+          aiDodge();
+          this.dodgeCooldown = 1500;
+          this.actionCooldown = cfg.reactionMs * 0.7;
+          break;
+        case 'block':
+          aiBlock();
+          this.blockCooldown = 2000;
+          this.actionCooldown = cfg.reactionMs;
+          break;
+      }
+    }, cfg.reactionMs * (0.3 + Math.random() * 0.4));
+  },
+
+  start() {
+    if (this.thinkInterval) clearInterval(this.thinkInterval);
+    this.thinkInterval = setInterval(() => this.think(), this.cfg.thinkInterval);
+  },
+
+  stop() {
+    if (this.thinkInterval) clearInterval(this.thinkInterval);
+    this.thinkInterval = null;
+  }
+};
+
+// AI helper actions
+function aiMove(dir) {
+  const el = document.getElementById('shubham');
+  const f = fighters.shubham;
+  f.x = Math.max(2, Math.min(65, f.x + dir * 5));
+  el.style.right = f.x + '%';
+  playMove();
+}
+
+function aiJump() {
+  const f = fighters.shubham;
+  if (f.isJumping) return;
+  f.isJumping = true;
+  const el = document.getElementById('shubham');
+  el.classList.add('jump-anim');
+  playJump();
+  setTimeout(()=>{ el.classList.remove('jump-anim'); f.isJumping = false; }, 500);
+}
+
+function aiDodge() {
+  const bodyEl = document.getElementById('shubham-body');
+  bodyEl.classList.remove('dodge-anim');
+  void bodyEl.offsetWidth;
+  bodyEl.classList.add('dodge-anim');
+  playDodge();
+  updateAiAction('dodge');
+  setTimeout(()=> bodyEl.classList.remove('dodge-anim'), 400);
+}
+
+function aiBlock() {
+  fighters.shubham.isBlocking = true;
+  const el = document.getElementById('shubham');
+  const shield = document.createElement('div');
+  shield.className = 'block-shield';
+  shield.style.cssText = 'background:linear-gradient(135deg,rgba(0,136,255,0.3),rgba(0,255,204,0.3));border:2px solid rgba(0,255,204,0.6);';
+  el.appendChild(shield);
+  playBlock();
+  updateAiAction('block 🛡️');
+  setTimeout(()=>{ shield.remove(); fighters.shubham.isBlocking = false; }, 500);
+}
+
+function updateAiStatus(emoji, text) {
+  document.getElementById('ai-mood').textContent = emoji;
+  document.getElementById('ai-mode-text').textContent = text;
+  document.getElementById('ai-emoji').textContent = emoji;
+}
+
+function updateAiAction(action) {
+  const labels = {
+    punch:'PUNCHING! 👊', kick:'KICKING! 🦵', special:'SUPER MOVE! ⚡',
+    approach:'CLOSING IN! 🎯', retreat:'DODGING! 🏃', dodge:'DODGE! 💨',
+    block:'BLOCKING! 🛡️', idle:'CALCULATING... 🤔'
+  };
+  document.getElementById('ai-action-display').textContent = labels[action] || action.toUpperCase();
+}
+
+function setDifficulty(diff) {
+  AI.difficulty = diff;
+  document.querySelectorAll('.diff-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(diff) || (diff==='beast' && b.textContent.includes('😈')));
+  });
+}
+
+function selectDiff(diff, btn) {
+  AI.difficulty = diff;
+  document.querySelectorAll('.diff-select-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+// ===== PLAYER CONTROLS =====
+const btnState = {};
+function handleBtn(id, isDown) {
+  if (!gameRunning || gamePaused) return;
+  if (isDown && !btnState[id]) {
+    btnState[id] = true;
+    document.getElementById(id)?.classList.add('pressed');
+    executeAction(id);
+  }
+  if (!isDown) { btnState[id] = false; document.getElementById(id)?.classList.remove('pressed'); }
+}
+
+function executeAction(id) {
+  initAudio();
+  switch(id) {
+    case 'a-punch': attack('ankku','punch'); break;
+    case 'a-kick': attack('ankku','kick'); break;
+    case 'a-special': attack('ankku','special'); break;
+    case 'a-jump': doJump('ankku'); break;
+    case 'a-left': movePlayer(-1); break;
+    case 'a-right': movePlayer(1); break;
+  }
+}
+
+function movePlayer(dir) {
+  const el = document.getElementById('ankku');
+  const f = fighters.ankku;
+  f.x = Math.max(2, Math.min(65, f.x + dir * 5));
+  el.style.left = f.x + '%';
+  playMove();
+}
+
+function doJump(fighter) {
+  const f = fighters[fighter];
+  if (f.isJumping) return;
+  f.isJumping = true;
+  const el = document.getElementById(fighter);
+  el.classList.add('jump-anim');
+  playJump();
+  setTimeout(()=>{ el.classList.remove('jump-anim'); f.isJumping = false; }, 500);
+}
+
+// ===== KEYBOARD =====
+window.addEventListener('keydown', e => {
+  const map = {'a':'a-left','d':'a-right','w':'a-jump','f':'a-punch','g':'a-kick','t':'a-special'};
+  const btnId = map[e.key.toLowerCase()];
+  if (btnId) { e.preventDefault(); handleBtn(btnId, true); }
+});
+window.addEventListener('keyup', e => {
+  const map = {'a':'a-left','d':'a-right','w':'a-jump','f':'a-punch','g':'a-kick','t':'a-special'};
+  const btnId = map[e.key.toLowerCase()];
+  if (btnId) handleBtn(btnId, false);
+});
+
+// ===== ATTACK LOGIC =====
+const hitWords = ['POW!','BAM!','OUCH!','YOW!','SMACK!','BOING!','ZAP!','WHAM!','THWACK!','OOF!','BONK!','KAPOW!'];
+const ankkuEmojis = ['🔥','😤','💥','👊','🤜','😡'];
+const shubhamEmojis = ['🤖','💻','⚡','🧠','📡','🔬'];
+
+function attack(attacker, type) {
+  const defender = attacker === 'ankku' ? 'shubham' : 'ankku';
+  const attackerEl = document.getElementById(attacker);
+  const defenderEl = document.getElementById(defender);
+  const bodyEl = document.getElementById(attacker + '-body');
+  const now = Date.now();
+  const f = fighters[attacker];
+  const fd = fighters[defender];
+
+  // Distance check
+  const ankkuLeft = parseFloat(document.getElementById('ankku').style.left) || 8;
+  const shubhamRight = parseFloat(document.getElementById('shubham').style.right) || 8;
+  const dist = 100 - ankkuLeft - shubhamRight;
+
+  let damage = 0, hitChance = 0;
+  if (type==='punch')  { damage=Math.floor(7+Math.random()*8); hitChance=dist<45?0.72:0.28; playPunch(); }
+  else if (type==='kick') { damage=Math.floor(11+Math.random()*10); hitChance=dist<50?0.62:0.22; playKick(); }
+  else if (type==='special') { damage=Math.floor(18+Math.random()*14); hitChance=0.58; playSuper(); createSpecialEffect(attackerEl, attacker); }
+
+  // Combo
+  if (now - f.lastAttack < 800) {
+    f.comboCount++;
+    if (f.comboCount >= 3) { damage = Math.floor(damage * 1.5); showCombo(attacker, f.comboCount); }
+  } else { f.comboCount = 1; }
+  f.lastAttack = now;
+
+  // Attack anim
+  bodyEl.classList.remove('attack-anim'); void bodyEl.offsetWidth; bodyEl.classList.add('attack-anim');
+  setTimeout(()=> bodyEl.classList.remove('attack-anim'), 300);
+
+  const atkEmojis = attacker === 'ankku' ? ankkuEmojis : shubhamEmojis;
+  showEmoji(attackerEl, atkEmojis[Math.floor(Math.random()*atkEmojis.length)]);
+
+  // Check if defender is blocking (AI only)
+  if (fd.isBlocking && attacker === 'ankku') {
+    const blockEl = document.createElement('div');
+    blockEl.className = 'hit-effect';
+    blockEl.textContent = 'BLOCKED! 🛡️';
+    blockEl.style.color = '#00ffcc';
+    blockEl.style.left = '20%'; blockEl.style.top = '10px';
+    defenderEl.appendChild(blockEl);
+    setTimeout(()=>blockEl.remove(), 600);
+    playBlock();
+    damage = Math.floor(damage * 0.15); // Only chip damage through block
+    hitChance = 1;
+  }
+
+  if (Math.random() < hitChance) applyDamage(defender, damage, defenderEl);
+  else showMiss(defenderEl);
+}
+
+function applyDamage(fighter, damage, el) {
+  const f = fighters[fighter];
+  f.hp = Math.max(0, f.hp - damage);
+  const pct = (f.hp / f.maxHp) * 100;
+  document.getElementById(fighter + '-hp-bar').style.width = pct + '%';
+  document.getElementById(fighter + '-hp-text').textContent = f.hp + ' HP';
+  const bodyEl = document.getElementById(fighter + '-body');
+  bodyEl.classList.remove('hit-anim'); void bodyEl.offsetWidth; bodyEl.classList.add('hit-anim');
+  setTimeout(()=> bodyEl.classList.remove('hit-anim'), 300);
+  document.getElementById('arena').classList.remove('screen-shake'); void document.getElementById('arena').offsetWidth;
+  document.getElementById('arena').classList.add('screen-shake');
+  showHitEffect(el, hitWords[Math.floor(Math.random()*hitWords.length)]);
+  spawnParticles(el, fighter==='ankku'?'#ff4400':'#0088ff');
+  showEmoji(el, '😵');
+
+  // AI reacts to being hit → aggression spike
+  if (fighter === 'shubham') {
+    AI.aggressionLevel = Math.min(AI.cfg.aggressionMax, AI.aggressionLevel + 10);
+    AI.consecutiveHits = 0;
+    if (pct < 30) { updateAiStatus('😡','RAGE MODE!'); }
+  }
+
+  if (f.hp <= 0) setTimeout(()=> endRound(fighter), 400);
+}
+
+function showMiss(el){ const m=document.createElement('div'); m.className='hit-effect'; m.textContent='MISS! 😜'; m.style.color='#888'; m.style.left='30%'; m.style.top='10px'; el.appendChild(m); setTimeout(()=>m.remove(),600); }
+function showEmoji(el, emoji){ const b=document.createElement('div'); b.className='emoji-bubble'; b.textContent=emoji; b.style.left=(20+Math.random()*60)+'%'; el.appendChild(b); setTimeout(()=>b.remove(),1200); }
+function showHitEffect(el,word){ const h=document.createElement('div'); h.className='hit-effect'; h.textContent=word; h.style.left=(10+Math.random()*60)+'%'; h.style.top=(-10+Math.random()*30)+'px'; h.style.color=['#ffd700','#ff4400','#00ffcc','#ff00aa'][Math.floor(Math.random()*4)]; el.appendChild(h); setTimeout(()=>h.remove(),600); }
+function showTaunt(el,text){ const t=document.createElement('div'); t.style.cssText=`position:absolute;top:-65px;left:50%;transform:translateX(-50%);background:rgba(0,0,20,0.9);border:1px solid rgba(0,255,204,0.3);color:#fff;font-family:'Comic Neue',cursive;font-size:clamp(8px,2vw,12px);padding:4px 8px;border-radius:8px;white-space:nowrap;z-index:60;animation:floatUp 2.5s ease-out forwards;pointer-events:none;max-width:170px;text-align:center;white-space:normal;`; t.textContent=text; el.appendChild(t); setTimeout(()=>t.remove(),2500); }
+function showCombo(fighter,count){ const a=document.getElementById('arena'),c=document.createElement('div'); c.className='combo-text'; c.style.left=fighter==='ankku'?'12%':'58%'; c.style.top='20%'; c.style.color=fighter==='ankku'?'#ff4400':'#0088ff'; c.textContent=count+'x COMBO! 🔥'; a.appendChild(c); setTimeout(()=>c.remove(),1000); playTone(880,'sine',0.1,0.3); }
+function spawnParticles(el,color){ const a=document.getElementById('arena'),r=el.getBoundingClientRect(),ar=a.getBoundingClientRect(),cx=r.left-ar.left+r.width/2,cy=r.top-ar.top+r.height/3; for(let i=0;i<10;i++){ const p=document.createElement('div'); p.className='particle'; const sz=4+Math.random()*8,ang=Math.random()*Math.PI*2,spd=30+Math.random()*80; p.style.cssText=`left:${cx}px;top:${cy}px;width:${sz}px;height:${sz}px;background:${color};--dx:${Math.cos(ang)*spd}px;--dy:${Math.sin(ang)*spd-40}px;--dur:${0.4+Math.random()*0.4}s;`; a.appendChild(p); setTimeout(()=>p.remove(),800); } }
+
+function createSpecialEffect(el, fighter) {
+  const a=document.getElementById('arena');
+  const blast=document.createElement('div');
+  blast.style.cssText=`position:absolute;top:28%;${fighter==='ankku'?'left:15%':'right:15%'};width:clamp(50px,18vw,130px);height:clamp(15px,4vw,30px);background:linear-gradient(90deg,${fighter==='ankku'?'#ff4400,#ff8800':'#0088ff,#00ffcc'});border-radius:50%;filter:blur(3px);z-index:40;animation:blastX 0.5s ease-out forwards;opacity:0.9;`;
+  const sty=document.createElement('style'); sty.textContent=`@keyframes blastX{0%{transform:scaleX(0);opacity:1;}60%{transform:scaleX(1.5) scaleY(1.4);opacity:1;}100%{transform:scaleX(4) translateX(${fighter==='ankku'?'60%':'-60%'}) scaleY(0.3);opacity:0;}}`;
+  document.head.appendChild(sty); a.appendChild(blast);
+  setTimeout(()=>{blast.remove();sty.remove();},600);
+  const emojis=fighter==='ankku'?['🔥','💥','😤','⚡']:['🤖','💻','⚡','💥'];
+  emojis.forEach((e,i)=>setTimeout(()=>{const em=document.createElement('div');em.style.cssText=`position:absolute;font-size:clamp(28px,7vw,55px);left:${25+i*12}%;top:${18+Math.random()*30}%;z-index:55;pointer-events:none;animation:hitPop 0.8s ease-out forwards;`;em.textContent=e;a.appendChild(em);setTimeout(()=>em.remove(),800);},i*100));
+}
+
+// ===== GAME FLOW =====
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  gameRunning = true;
+  initAudio();
+  AI.init(AI.difficulty);
+  AI.start();
+  startTimer();
+  playBgMusic();
+}
+
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    if (gamePaused) return;
+    timer--;
+    document.getElementById('timer').textContent = timer;
+    document.getElementById('timer').style.color = timer<=10?'#ff4400':'#fff';
+    if (timer <= 0) timeUp();
+  }, 1000);
+}
+
+function timeUp() {
+  clearInterval(timerInterval);
+  AI.stop();
+  const loser = fighters.ankku.hp >= fighters.shubham.hp ? 'shubham' : 'ankku';
+  endRound(loser);
+}
+
+function endRound(loser) {
+  clearInterval(timerInterval);
+  AI.stop();
+  gameRunning = false;
+  const winner = loser === 'ankku' ? 'shubham' : 'ankku';
+  const wName = winner === 'ankku' ? 'ANKKU' : 'SHUBHAM AI';
+  const wColor = winner === 'ankku' ? '#ff4400' : '#0088ff';
+  const wEmoji = winner === 'ankku' ? '🔥' : '🤖';
+
+  const quotes = winner === 'ankku' ? [
+    "Shubham AI: 'This is a bug, not a loss!' 🐛",
+    "AI.exe crashed. Rebooting... 💻",
+    "AI: 'I was running low on RAM! 😅'",
+    "Shubham AI needs a software update! 🔄",
+    "ERROR 404: Win condition not found 😂"
+  ] : [
+    "Ankku: 'My WiFi was lagging!' 📶",
+    "Ankku: 'Give me 5 more minutes!' 😭",
+    "AI Shubham: 'I calculated your defeat 2 mins ago 😎'",
+    "Ankku overheated trying to beat AI 🔥",
+    "AI says: 'Skill issue detected! 🤖'"
+  ];
+
+  document.getElementById('winner-text').innerHTML = `<span style="color:${wColor};text-shadow:0 0 40px ${wColor}">${wEmoji} ${wName} WINS! ${wEmoji}</span>`;
+  document.getElementById('winner-quote').textContent = quotes[Math.floor(Math.random()*quotes.length)];
+  document.getElementById('winner-screen').style.display = 'flex';
+  playWin();
+  if (winner === 'shubham') updateAiStatus('😎','VICTORY!');
+
+  const a = document.getElementById('arena');
+  for(let i=0;i<20;i++) setTimeout(()=>{ const fw=document.createElement('div'); fw.style.cssText=`position:absolute;font-size:clamp(18px,5vw,38px);left:${Math.random()*80+10}%;top:${Math.random()*60+5}%;z-index:95;pointer-events:none;animation:hitPop 1s ease-out forwards;`; fw.textContent=['🎉','✨','🎊','💥','⭐','🌟'][Math.floor(Math.random()*6)]; a.appendChild(fw); setTimeout(()=>fw.remove(),1000); },i*150);
+}
+
+function resetGame() {
+  document.getElementById('winner-screen').style.display = 'none';
+  fighters.ankku.hp = 100; fighters.shubham.hp = 100;
+  fighters.ankku.x = 8; fighters.shubham.x = 8;
+  fighters.ankku.comboCount = 0; fighters.shubham.comboCount = 0;
+  fighters.shubham.isBlocking = false;
+  document.getElementById('ankku').style.left = '8%';
+  document.getElementById('shubham').style.right = '8%';
+  document.getElementById('ankku-hp-bar').style.width = '100%';
+  document.getElementById('shubham-hp-bar').style.width = '100%';
+  document.getElementById('ankku-hp-text').textContent = '100 HP';
+  document.getElementById('shubham-hp-text').textContent = '100 HP';
+  document.getElementById('timer').textContent = '60';
+  document.getElementById('timer').style.color = '#fff';
+  timer = 60; round = 1;
+  document.getElementById('round-text').textContent = 'ROUND 1';
+  gameRunning = true;
+  AI.init(AI.difficulty);
+  AI.start();
+  startTimer();
+  playBgMusic();
+}
+
+function togglePause() {
+  if (!gameRunning && !gamePaused) return;
+  gamePaused = !gamePaused;
+  document.getElementById('start-btn').textContent = gamePaused ? '▶ RESUME' : '⏸ PAUSE';
+  if (!gamePaused) { initAudio(); AI.start(); }
+  else AI.stop();
+}
+
+// ===== INIT =====
+window.addEventListener('resize', ()=>{ resizeCanvas(); initParticles3D(); });
+resizeCanvas(); initParticles3D(); drawBg();
+document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+</script>
+</body>
+</html>
